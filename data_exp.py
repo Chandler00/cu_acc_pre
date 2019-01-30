@@ -8,12 +8,19 @@ Created on Mon Jan 28 21:17:19 2019
 
 import pandas as pd
 
+
+#%%
 #   1. data exploration
 # load data
 train_set = pd.read_csv('./train/train_monthly_info.csv')
 train_acc = pd.read_csv('./train/train_accounts.csv')
 train_ref = pd.read_csv('./train/xref.csv')
 test_set =  pd.read_csv('./test/test_monthly_info.csv')
+
+#%%
+# used to develop template
+train_set = train_set[train_set['date']<='2015-08-28']
+train_acc = train_acc[train_acc['date']<='2015-08-28']
 
 # basic information
 train_set.head(5)
@@ -77,7 +84,7 @@ def re_common(df, column):
     
     df[column].fillna(common, inplace =True)
     
-
+re_common(train_acc, 'payroll')
 
 for column in ['segment', 'channel', 'customer_relation', 'customer_type', 
                 'province_code', 'sex']:
@@ -87,7 +94,8 @@ for column in ['segment', 'channel', 'customer_relation', 'customer_type',
 # replace na from gross income to mean or median
 train_set['gross_income'].fillna(train_set['gross_income'].mean(skipna=True), inplace=True)
 
-# if last_date_primary is confirm then return 1  if null then 0.
+# if last_date_primary is confirm then return 1  if null then 0. 
+# after that i found it has same value of primary. so drop primary
 def replace_value(content):
     
     if pd.isnull(content):
@@ -99,8 +107,8 @@ def replace_value(content):
 
 train_set['last_date_primary'] = train_set['last_date_primary'].map(replace_value)       
 train_set['last_date_primary'].fillna(0, inplace=True)
+train_set.drop(['primary'], axis =1, inplace=True)
 
-    
 #train_set['last_date_primary'].fillna(0, inplace=True)
 
 # consolidate data type
@@ -108,8 +116,13 @@ train_set['last_date_primary'].fillna(0, inplace=True)
 def con_type(df, column, typestr):
     
     df[column] = df[column].astype(typestr)
- 
-for column in ['age', 'last_6_months_flag', 'seniority', 'primary', 'last_date_primary']:
+
+for column in ['province_code']:
+    
+    con_type(train_set, column, 'str')
+
+for column in ['age', 'last_6_months_flag', 'seniority', 'primary', 
+               'last_date_primary', 'activity_index']:
     
     con_type(train_set, column, 'int')
 
@@ -121,6 +134,8 @@ train_set['customer_type'].replace({'1.0':'pr', '1':'pr', '2':'co', '2.0':'co'
 train_set['domestic_index'].replace({'S':1, 'N':0}, inplace=True)
 train_set['foreigner_index'].replace({'S':1, 'N':0}, inplace=True)
 
+# save output
+train_set.to_csv(r'.\preprocess\train_set.csv')
 
 
 
