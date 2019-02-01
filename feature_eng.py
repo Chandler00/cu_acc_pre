@@ -7,9 +7,11 @@ Created on Tue Jan 29 16:30:51 2019
 """
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from sklearn.feature_selection import VarianceThreshold
-# to free memory - garbage collector
+#  free memory - garbage collector
 import gc
 gc.collect()
 
@@ -20,6 +22,7 @@ gc.collect()
 
 #%%
 # encoding of the train_set
+# let's look at the existing columns and pick up the feature needs encoding.
 # columns ['date', 'cust_id', 'employee_index', 'country', 'sex', 'age',
 #       'open_date', 'last_6_months_flag', 'seniority', 
 #       'last_date_primary', 'customer_type', 'customer_relation',
@@ -32,6 +35,7 @@ gc.collect()
 cat_fea_label = ['country', 'sex', 'customer_type', 'customer_relation',
                  'channel', 'province_code','segment']
 
+# set a copy of existing one for development purpose only
 test = train_set[cat_fea_label]
 
 # pandas's powerful onehot encoding method
@@ -60,32 +64,58 @@ def var_filter(df, threshold = 0.2):
 
 # not enough memory from my coumpter, have to chunk into few pieces 
 # and find the variance for features from high to low
-def var_selector(df):
+def var_selector(df, upper, lower, step):
     
-    for threshold in np.arange(0.6, 0, -0.05):
+    for threshold in np.arange(upper, lower, -step):
         print('current testing threshold ' + str(threshold))
         fea_list = []
         i=0
+        
         while i < (len(df.columns)//100 +1):
             
             try:
                 feature = var_filter(onehot.iloc[:, (i-1)*100:(i*100)], threshold=threshold)
                 i+=1
-                fea_list.append(feature.columns)
+                fea_list.append(feature.columns.values)
+                
             except:
-                print('feature not found with %s'%s (i))
+                print('no feature pass the threshold at NO.%s'%(i) + ' chunk')
                 i+=1
                 
-        print (fea_list)
+        if len(fea_list)>0:
+            print (fea_list)
+            
+        else:
+            print ('no feature has higher variance than %s'%(threshold))
 
-# loopthrough the variance and find the optimum point
-var_selector(onehot)
 
-for i in np.arange(1, 0,-0.05):
+# loopthrough the variance and find the optimum point which can be expensive.
+# returns information : current testing threshold 0.200000000000000046
+#no feature pass the threshold at NO.0 chunk
+#no feature pass the threshold at NO.1 chunk
+#['sex_H', 'sex_V', 'customer_relation_A', 'customer_relation_I','channel_KAT'] at NO.2 chunk
+#['channel_KFA', 'channel_KFC', 'channel_KHE', 'province_code_11.0','province_code_15.0'] at NO.3 chunk
+#current testing threshold 0.10000000000000005
+#no feature pass the threshold at NO.0 chunk
+#no feature pass the threshold at NO.1 chunk
+#['sex_H', 'sex_V', 'customer_relation_A', 'customer_relation_I','channel_KAT'] at NO.2 chunk
+#['channel_KFA', 'channel_KFC', 'channel_KHE', 'channel_KHK','province_code_11.0', 'province_code_14.0', 'province_code_15.0',
+# 'province_code_18.0'] at NO.3 chunk 
+
+var_selector(onehot, 1, 0, 0.05)
+
+# correlation coefficient check for features selected and manually picked features.
+def plot_cor(fe_df):
     
-    print(i)
+    corr = fe_df.corr()
+    plt.figure(figsize=(16, 16))
+    corr_map = sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns, 
+                           annot=True)
+    figure = corr_map.get_figure()
+    figure.savefig('./vis/corr_conf.png')
 
-
+plot_cor(onehot[['sex_V', 'customer_relation_A']])
+#
 selector = VarianceThreshold(threshold=0.5)
 selector.fit_transform(test)
 
